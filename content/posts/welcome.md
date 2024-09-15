@@ -24,3 +24,5 @@ Over the long term I aim to expand my knowledge on materials modeling, and expan
 
 I've been an open source zealot since I was a teenager, and I still believe that open source development is the best way to advance our practices and evolve entire fields.
 This blog will feature much of the technical work I do to this end.
+
+~ david
