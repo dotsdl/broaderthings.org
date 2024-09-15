@@ -24,3 +24,6 @@ If you are looking for guidance and assistance in solving your business problems
 [BlueSky](https://bsky.app/profile/dotsdl.bsky.social)
 [ORCID](https://orcid.org/0000-0001-5879-2942 )
 [Google](https://scholar.google.com/citations?user=tN3FOxgAAAAJ)
+
+Looking for my personal blog?
+You can find it at [**the smaller things**](https://smallerthings.org/)!

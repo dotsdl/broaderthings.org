@@ -88,6 +88,11 @@ paginate = 5
           url = "/projects"
           weight = 20
         [[languages.en.menu.main]]
+          identifier = "tags"
+          name = "tags"
+          url = "/tags"
+          weight = 30
+        [[languages.en.menu.main]]
           identifier = "github"
           name = "github"
           url = "https://github.com/dotsdl"
