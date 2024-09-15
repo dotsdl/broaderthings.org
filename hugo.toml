@@ -1,4 +1,4 @@
-baseURL = 'https://broaderthings.org/'
+baseURL = ''
 languageCode = 'en-us'
 title = 'the broader things'
 theme = "terminal"
