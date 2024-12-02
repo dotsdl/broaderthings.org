@@ -11,7 +11,7 @@ Welcome to **the broader things**, my public development log.
 Most of my work comprises open source software engineering, and this means I can share much of what I work on freely and publicly.
 This space functions as a kind of scratch pad for this work, especially on topics of systems and software design. 
 
-I also own and operate a consultancy, [datryllc](https://datryllic.com/).
+I also own and operate a consultancy, [datryllic](https://datryllic.com/).
 This is my primary vehicle for helping others to use the things I work on, especially industrial users.
 
 If you are looking for guidance and assistance in solving your business problems with the projects I contribute to, feel free to [get in touch](https://datryllic.com/contact/)!
