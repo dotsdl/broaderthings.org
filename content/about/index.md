@@ -7,14 +7,14 @@ draft = false
 Hey! I'm David L. Dotson, a physicist and software/systems engineer.
 Welcome to **the broader things**, my public development log.
 
-{{< image src="dotsdl-avatar.jpg" height=500 position=center title="David L. Dotson" style="border-width: 2px;" >}}
+{{< image src="dotsdl-avatar.jpg" width=400 position=center title="David L. Dotson" style="border-width: 2px;" >}}
 
 Most of my work comprises open source software engineering, and this means I can share much of what I work on freely and publicly.
 This space functions as a kind of scratch pad for this work, especially on topics of systems and software design. 
 
 I also own and operate a consultancy, [datryllic](https://datryllic.com/).
 
-{{< image src="datryllic.svg" height=200 position=center title="Datryllic" style="border-width: 0px;" >}}
+{{< image src="datryllic.svg" width=400 position=center title="Datryllic" style="border-width: 0px;" >}}
 
 This is my primary vehicle for helping others to use the things I work on, especially industrial users.
 
