@@ -4,7 +4,8 @@ readingTime = false
 draft = false
 +++
 
-Hey! I'm David L. Dotson, a physicist and software/systems engineer.
+Hey! I'm **David L. Dotson**, a physicist and software/systems engineer.
+
 Welcome to **the broader things**, my public development log.
 
 {{< image src="dotsdl-avatar.jpg" width=400 position=center title="David L. Dotson" style="border-width: 2px;" >}}

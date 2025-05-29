@@ -44,14 +44,6 @@ pagination.pagerSize = 5
   # can be overridden in a page's front-matter
   TocTitle = "contents" # default
 
-
-[params.twitter]
-  # set Twitter handles for Twitter cards
-  # see https://developer.twitter.com/en/docs/tweets/optimize-with-cards/guides/getting-started#card-and-content-attribution
-  # do not include @
-  creator = "dotsdl"
-  site = ""
-
 [languages]
   [languages.en]
     languageName = "English"
@@ -88,10 +80,15 @@ pagination.pagerSize = 5
           url = "/projects"
           weight = 20
         [[languages.en.menu.main]]
+          identifier = "posts"
+          name = "posts"
+          url = "/posts"
+          weight = 30
+        [[languages.en.menu.main]]
           identifier = "tags"
           name = "tags"
           url = "/tags"
-          weight = 30
+          weight = 40
         [[languages.en.menu.main]]
           identifier = "github"
           name = "github"
