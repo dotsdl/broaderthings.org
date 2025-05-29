@@ -2,7 +2,7 @@ baseURL = ''
 languageCode = 'en-us'
 title = 'the broader things'
 theme = "terminal"
-paginate = 5
+pagination.pagerSize = 5
 
 [params]
   # dir name of your main content (default is `content/posts`).
@@ -100,3 +100,7 @@ paginate = 5
           identifier = "linkedin"
           name = "linkedin"
           url = "https://www.linkedin.com/in/dotsdl/"
+        [[languages.en.menu.main]]
+          identifier = "orcid"
+          name = "orcid"
+          url = "https://orcid.org/0000-0001-5879-2942"
