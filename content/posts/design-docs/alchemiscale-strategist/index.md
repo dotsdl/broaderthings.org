@@ -1,11 +1,11 @@
 +++
 title = "design : alchemiscale strategist"
-date = "2025-05-29T14:30:00-07:00"
+date = "2025-06-05T21:15:00-07:00"
 author = "david@vitalxi"
 cover = ""
 tags = ["project-alchemiscale", "design"]
-keywords = ["", ""]
-description = ""
+keywords = ["design", "distributed-compute"]
+description = "a design document for the alchemiscale Strategist service"
 showFullContent = false
 readingTime = true
 Toc = true
