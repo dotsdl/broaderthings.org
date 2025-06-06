@@ -116,13 +116,13 @@ Users can interrogate `Strategy` state with:
 
 ```python
 > asc.get_network_strategy_state(an_sk)
-StrategyState(mode: 'partial', status: 'awake', iterations: 4, sleep_interval: 3600, 
+StrategyState(mode: 'partial', status: 'awake', iterations: 4, sleep_interval: 3600,
               last_iteration: '2025-05-30T18:24:30.540413+00:00',
               last_iteration_result_count: 1213,
               max_tasks_per_transformation: 5,
               max_tasks_per_network: None,
               task_scaling: 'exponential',
-             ) 
+             )
 
 ```
 
@@ -214,15 +214,15 @@ The service performs the following sequence as cycles in an infinite loop:
 1. Query the state store for all non-**disabled** and non-**error** `Strategy`s.
 
 2. For each `Strategy` due for an iteration based on `sleep_interval`, dispatch the following to `ProcessPoolExecutor`:
-    
+
     - If the `Strategy` is **dormant**, check the number of successful `ProtocolDAGResult`s against last recorded count.
-        
+
         - If different, switch `status` to `awake` and proceed; if not, remain `dormant` and skip.
 
     - Pull the `AlchemicalNetwork` and all successful `ProtocolDAGResult`s for each `Transformation`, and gather into `ProtocolResult`s.
 
     - Feed these to `Strategy.propose()` to yield a `StrategyResult`, and acquire normalized `Transformation` weights with `StrategyResult.resolve()`.
-        
+
         - If weights are all `None`, set `Strategy` `status` to **dormant** and skip. Additionally, if `Strategy` `mode` is **full**, cancel all actioned `Task`s on the `AlchemicalNetwork`.
 
         - For `Transformation`s with `error`ed `Task`s, set weights to `None`.
@@ -236,7 +236,7 @@ The service performs the following sequence as cycles in an infinite loop:
     - Update the `Strategy` `iteration` count, number of successful `ProtocolDAGResult`s encountered, `last_iteration` datetime.
 
     - If any of the above steps failed, set `Strategy` `status` to **error**.
-    
+
 
 3. Sleep for configured `Strategist` `sleep_interval`.
 
@@ -270,18 +270,18 @@ Which gives the following qualitative relationship between weight and `Task` cou
 max_tasks_per_transformation = 6
 
 # linear
-        
+
 tasks        1           2           3          4           5          6
         |----------|-----------|----------|-----------|----------|-----------|
 weight  0                                                                    1
-        
-        
+
+
 # exponential
-        
+
 tasks                   1                         2            3      4   5 6
         |--------------------------------|----------------|--------|----|--|-|
 weight  0                                                                    1
-   
+
 
 ```
 
@@ -295,7 +295,7 @@ total_task_counts = sum(task_counts)
 
 if (max_tasks_per_network is not None) and
    (total_task_counts > max_tasks_per_network):
-    task_counts_scaled = (np.array(task_counts) * 
+    task_counts_scaled = (np.array(task_counts) *
                           max_tasks_per_network/total_task_counts)
     task_counts_scaled = list(task_counts_scaled.astype(int))
 else:
@@ -331,7 +331,7 @@ A `Strategy` submitted to **alchemiscale** for a given `AlchemicalNetwork` is re
 graph LR;
 
    Strategy-- PROGRESSES -->AlchemicalNetwork
-    
+
 ```
 
 Where the `PROGRESSES` relationship features the (Neo4j-friendly versions of) attributes of `StrategyState`:
