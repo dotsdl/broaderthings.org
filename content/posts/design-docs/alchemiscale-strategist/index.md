@@ -66,6 +66,9 @@ results = asc.get_network_results(an_sk)
 The `Strategy` will automatically be applied by **alchemiscale** to the `AlchemicalNetwork`.
 `Task`s will be periodically created and actioned on the `AlchemicalNetwork` as needed based on the `Strategy`'s proposal for how much additional effort to allocate to each `Transformation` given the results accumulated so far.
 
+
+### additional options
+
 The `AlchemiscaleClient.set_network_strategy()` method also features the following keyword arguments that adjust how the `Strategy` is performed by **alchemiscale**, independent of the `Strategy`'s own settings:
 
 - `max_tasks_per_transformation` : the maximum number of actioned `Task`s allowed on a `Transformation` at once; default 3
@@ -74,9 +77,9 @@ The `AlchemiscaleClient.set_network_strategy()` method also features the followi
 
 - `task_scaling` : modulates how to translate weights into `Task` counts; `"linear"` scales this count directly by weight, while `"exponential"` operates more conservatively by requiring higher weights to yield higher counts
 
-- `sleep_interval` : wait time between iterations of the `Strategy`; the `Strategist` service will have also have a minimum `sleep_interval`, and the larger of the two will take effect
+- `sleep_interval` : wait time between iterations of the `Strategy`; the `Strategist` service (see [below]({{< ref "#the-strategist-service" >}})) will have also have a minimum `sleep_interval`, and the larger of the two will take effect
 
-A user can set replace the `Strategy` on the `AlchemicalNetwork` using `set_network_strategy()` as above, or can drop the `Strategy` entirely by calling:
+A user can replace the `Strategy` on the `AlchemicalNetwork` using `set_network_strategy()` as above, or can drop the `Strategy` entirely by calling:
 
 ```python
 # drop strategy from the network
@@ -84,7 +87,7 @@ asc.set_network_strategy(network_sk, None)
 
 ```
 
-### modes, states, and introspection
+### mode, status, and introspection
 
 A `Strategy` assigned to an `AlchemicalNetwork` can be in one of the following `mode`s:
 
@@ -109,25 +112,47 @@ The `status` of the `Strategy` is changed by the `Strategist` over time based on
 See [the `Strategist` service]({{< ref "#the-strategist-service" >}}) section for details.
 
 
-Users can interrogate `Strategy` health with:
-
-```python
-> asc.get_network_strategy_health(an_sk)
-StrategyHealth(mode: 'partial', status: 'awake', iterations: 4, sleep_interval: 3600, 
-               last_iteration: '2025-05-30T18:24:30.540413+00:00',
-               last_iteration_result_count: 1213) 
-
-```
-
-Or specifically ask for its `state`:
+Users can interrogate `Strategy` state with:
 
 ```python
 > asc.get_network_strategy_state(an_sk)
+StrategyState(mode: 'partial', status: 'awake', iterations: 4, sleep_interval: 3600, 
+              last_iteration: '2025-05-30T18:24:30.540413+00:00',
+              last_iteration_result_count: 1213,
+              max_tasks_per_transformation: 5,
+              max_tasks_per_network: None,
+              task_scaling: 'exponential',
+             ) 
+
+```
+
+Or specifically ask for its `status`:
+
+```python
+> asc.get_network_strategy_status(an_sk)
 'partial'
 
 ```
 
-And can retrieve the `Strategy` with:
+A `Strategy` with `status` **error** will also feature the ability to get `exception` and `traceback` information from `StrategyState`:
+
+```python
+> state = asc.get_network_strategy_state(an_sk)
+> state.status
+'error'
+
+> state.exception
+("KeyError", "No such key 'foo'")
+
+> state.traceback
+Traceback (most recent call last):
+  File "/opt/conda/lib/python3.10/site-packages/stratocaster/base/strategy.py", line 127, in propose
+    return self._propose(alchemical_network, protocol_results)
+    ...
+
+```
+
+Users can also retrieve the `Strategy` itself with:
 
 ```python
 > asc.get_network_strategy(an_sk)
@@ -137,6 +162,12 @@ And can retrieve the `Strategy` with:
 
 This is useful if a user wants to make a new `Strategy` based on the settings of the current one, but with some modifications.
 
+If the `Strategy` has gone **dormant** or entered **error** status, users can kick it **awake** with:
+
+```python
+asc.set_network_strategy_awake(an_sk)
+```
+
 
 ## the Strategist service
 
@@ -144,16 +175,39 @@ All `Strategy`s submitted by users are performed server-side by the `Strategist`
 This service directly interfaces with the state and object stores in the same way as the API services do, minimizing latency and complexity.
 
 ```mermaid
-architecture-beta
+---
+config:
+  theme: neutral
+---
+graph LR;
 
-    service statestore(database)[state store]
-    service objectstore(database)[object store]
+    subgraph user client
+    client[[user client]]
+    end
 
-    service strategist(server)[strategist]
+    subgraph alchemiscale server
+    api[[user api]] & strategist[[strategist]] & computeapi[[compute api]]--> statestore[(state store)] & objectstore[(object store)]
+    end
 
-    statestore:R <-- L:strategist
-    strategist:R --> L:objectstore
+    subgraph HPC
+    computehpc[[compute service]]
+    end
+
+    subgraph k8s
+    computek8s[[compute service]]
+    end
+
+    subgraph Folding at Home
+    computefah[[compute service]]
+    end
+
+    client-->api
+    computehpc-->computeapi
+    computek8s-->computeapi
+    computefah-->computeapi
+
 ```
+
 
 The service performs the following sequence as cycles in an infinite loop:
 
@@ -169,7 +223,9 @@ The service performs the following sequence as cycles in an infinite loop:
 
     - Feed these to `Strategy.propose()` to yield a `StrategyResult`, and acquire normalized `Transformation` weights with `StrategyResult.resolve()`.
         
-        - If weights are all `None`, set `Strategy` `status` to **dormant** and skip. If `Strategy` `mode` is **full**, cancel all actioned `Task`s on the `AlchemicalNetwork`.
+        - If weights are all `None`, set `Strategy` `status` to **dormant** and skip. Additionally, if `Strategy` `mode` is **full**, cancel all actioned `Task`s on the `AlchemicalNetwork`.
+
+        - For `Transformation`s with `error`ed `Task`s, set weights to `None`.
 
     - Convert these weights into `Task` counts for each `Transformation` (see [below]({{< ref "#proposal-weights-to-task-counts" >}}) for how we do this).
 
@@ -179,7 +235,7 @@ The service performs the following sequence as cycles in an infinite loop:
 
     - Update the `Strategy` `iteration` count, number of successful `ProtocolDAGResult`s encountered, `last_iteration` datetime.
 
-    - If any of the above steps failed, set `Strategy` state to **error**.
+    - If any of the above steps failed, set `Strategy` `status` to **error**.
     
 
 3. Sleep for configured `Strategist` `sleep_interval`.
@@ -191,12 +247,11 @@ We require a mechanism for translating normalized `Strategy` proposal weights (c
 There are likely many reasonable ways to do this, but we propose the following per `Transformation`:
 
 ```python
-
-w: float
+w: float                               # proposed Transformation weight
 max_tasks_per_transformation: int
-task_scaling: str
+task_scaling: str                      # 'linear' or 'exponential'
 
-if w == 0:
+if w is None or w == 0:
     tasks = 0
 elif w == 1:
     tasks = max_tasks_per_transformation
@@ -208,15 +263,94 @@ else:
 
 ```
 
-These values will then 
+Which gives the following qualitative relationship between weight and `Task` counts, assuming `max_tasks_per_transformation = 6`:
+
+```
+
+max_tasks_per_transformation = 6
+
+# linear
+        
+tasks        1           2           3          4           5          6
+        |----------|-----------|----------|-----------|----------|-----------|
+weight  0                                                                    1
+        
+        
+# exponential
+        
+tasks                   1                         2            3      4   5 6
+        |--------------------------------|----------------|--------|----|--|-|
+weight  0                                                                    1
+   
+
+```
+
+Following this, we (potentially) scale down the `Task` counts based on `max_tasks_per_network`:
+
+```python
+import numpy as np
+task_counts: list[int]       # proposed task counts for each Transformation
+
+total_task_counts = sum(task_counts)
+
+if (max_tasks_per_network is not None) and
+   (total_task_counts > max_tasks_per_network):
+    task_counts_scaled = (np.array(task_counts) * 
+                          max_tasks_per_network/total_task_counts)
+    task_counts_scaled = list(task_counts_scaled.astype(int))
+else:
+    task_counts_scaled = task_counts
+
+```
+
+Importantly, this rescaling retains the determinism in the `Task` counts emitted by `Strategist`.
 
 
+### Strategy status transitions
 
-### Strategy status changes
+A newly-set `Strategy` begins in the **awake** `status`, but can transition to **dormant** or **error** (and back again):
 
-A `Strategy` that has failed to provide a proposal due to an `Exception` will have its state set to `"error"`.
+```mermaid
+stateDiagram-v2
+    direction LR
+    dormant --> awake : count(ok PDRs) != last_iteration_result_count
+    dormant --> awake : user reset
+    awake --> dormant : Strategy stop condition
+
+    error --> awake : user reset
+    awake --> error : Strategy raise exception
+
+```
 
 
+### Strategy database schema
+
+A `Strategy` submitted to **alchemiscale** for a given `AlchemicalNetwork` is represented in the state store (Neo4j) as:
+
+```mermaid
+graph LR;
+
+   Strategy-- PROGRESSES -->AlchemicalNetwork
+    
+```
+
+Where the `PROGRESSES` relationship features the (Neo4j-friendly versions of) attributes of `StrategyState`:
+
+```python
+class StrategyState:
+    mode: StrategyModeEnum
+    status: StrategyStatusEnum
+    iterations: int
+    sleep_interval: int
+    last_iteration: datetime
+    last_iteration_result_count: int
+    max_tasks_per_transformation: int
+    max_tasks_per_network: int | None
+    task_scaling: StrategyTaskScalingEnum
+```
+
+Since `Strategy` is a `GufeTokenizable`, this allows the same `Strategy` object to serve multipe `AlchemicalNetwork`s in the same `Scope` if already present, while the `StrategyState` specific to each `AlchemicalNetwork` is encoded in the relationship to that `AlchemicalNetwork`.
+An alternative to this approach would be to make `StrategyState` a separate node with relationships to both the `Strategy` and `AlchemicalNetwork`, but this is likely unnecessarily complex.
 
 
 ## miscellanea
@@ -227,8 +361,11 @@ Additional notes:
     - users should deal with these `error`ed `Task`s in order to clear the `Transformation` for handling by the `Strategy`
 
 2. The `Strategist` must feature an LRU cache of substantial max size for `ProtocolDAGResult`s, reducing the need to pull them from the object store each time it performs a `Strategy` iteration.
+    - instead of `ProtocolDAGResult`s, this cache could retain `ProtocolResult`s along with the count of `ProtocolDAGResult` used to create them; cache invalidation would compare this count with the count present in the state store; this approach could substantially reduce cache size while still offering sufficient performance
 
-3. We later want to include a mechanism for making `Strategy`s perform extensions from existing `Task`s on a `Transformation`. One idea is to include an `extends_preference` keyword argument to `AlchemiscaleClient.set_network_strategy()` with the following behavior:
+3. When a `Strategy` is in **full** `mode`, it should prioritize canceling unclaimed `Task`s when possible to avoid wasting compute.
+
+4. We may later want to include a mechanism for making `Strategy`s perform extensions from existing `Task`s on a `Transformation`. One idea is to include an `extends_preference` keyword argument to `AlchemiscaleClient.set_network_strategy()` with the following behavior:
     - if `0`, perform no extensions at all
     - if `1`, always perform extension when possible
     - if between `0` and `1`, extend or not extend in proportion to this value (e.g. `0.7` would mean around 70% of `Task`s created would extend from another `Task`)
