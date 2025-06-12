@@ -369,3 +369,5 @@ Additional notes:
     - if `0`, perform no extensions at all
     - if `1`, always perform extension when possible
     - if between `0` and `1`, extend or not extend in proportion to this value (e.g. `0.7` would mean around 70% of `Task`s created would extend from another `Task`)
+
+5. Must be careful that setting `Strategy` to `None` doesn't delete `Strategy` object if other `PROGRESSES` relationship(s) present.
